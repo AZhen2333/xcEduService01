@@ -13,12 +13,21 @@ import org.springframework.data.mongodb.core.mapping.Field;
 @ToString
 public class SysDictionaryValue {
 
+    /**
+     * 项目id
+     */
     @Field("sd_id")
     private String sdId;
 
+    /**
+     * 项目名称
+     */
     @Field("sd_name")
     private String sdName;
 
+    /**
+     * 项目状态（1：可用，0不可用）
+     */
     @Field("sd_status")
     private String sdStatus;
 
