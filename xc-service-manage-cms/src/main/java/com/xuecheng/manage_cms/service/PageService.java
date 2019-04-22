@@ -34,6 +34,7 @@ import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -359,5 +360,20 @@ public class PageService {
         cmsPageRepository.save(cmsPage);
         return cmsPage;
 
+    }
+
+    /**
+     * 添加页面，如果已存在则更新页面 
+     *
+     * @param cmsPage
+     * @return
+     */
+    public CmsPageResult save(CmsPage cmsPage) {
+        CmsPage one = cmsPageRepository.findByPageNameAndSiteIdAndPageWebPath(cmsPage.getPageName(), cmsPage.getSiteId(), cmsPage.getPageWebPath());
+        if (one != null) {
+            return this.update(one.getPageId(), cmsPage);
+        } else {
+            return this.add(cmsPage);
+        }
     }
 }

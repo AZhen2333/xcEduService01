@@ -66,7 +66,16 @@ public class CmsPageRepositoryTest {
     }
 
     @Test
-    public void queryFile() {
-
+    public void testStore2() throws FileNotFoundException {
+        // 要储存的文件
+        File file = new File("D:/czz/study/teach/course.ftl");
+        // 定义输入流
+        FileInputStream inputStream = new FileInputStream(file);
+        // 想gridFs存储文件
+        ObjectId objectId = gridFsTemplate.store(inputStream, "课程详情模板文件", "");
+        // 得到文件id
+        String fileId = objectId.toString();
+        System.out.print("fileId:" + fileId);
+        System.out.print(file);
     }
 }

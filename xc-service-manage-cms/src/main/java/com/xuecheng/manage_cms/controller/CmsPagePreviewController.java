@@ -22,7 +22,8 @@ public class CmsPagePreviewController extends BaseController {
      * @param pageId
      */
     public void perview(@PathVariable("pageId") String pageId) {
-        String pagrHtml = pageService.getPagrHtml(pageId);
+        response.setHeader("Content‐type", "text/html;charset=utf‐8");
+        String pagrHtml = pageService.getPageHtml(pageId);
         if (StringUtils.isNotEmpty(pagrHtml)) {
             try {
                 ServletOutputStream outputStream = response.getOutputStream();
