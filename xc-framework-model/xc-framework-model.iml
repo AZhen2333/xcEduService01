@@ -18,6 +18,8 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="xc-framework-common" />
     <orderEntry type="module" module-name="xc-framework-utils" />
+    <orderEntry type="module" module-name="xc-framework-common" />
+    <orderEntry type="module" module-name="xc-framework-utils" />
     <orderEntry type="library" name="Maven: javax.servlet:javax.servlet-api:3.1.0" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-logging:2.0.1.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: ch.qos.logback:logback-classic:1.2.3" level="project" />
