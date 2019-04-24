@@ -5,10 +5,12 @@ import com.mongodb.client.gridfs.GridFSBucket;
 import com.mongodb.client.gridfs.GridFSDownloadStream;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import com.xuecheng.framework.domain.cms.CmsPage;
+import com.xuecheng.framework.domain.cms.CmsSite;
 import com.xuecheng.framework.domain.cms.CmsTemplate;
 import com.xuecheng.framework.domain.cms.request.QueryPageRequest;
 import com.xuecheng.framework.domain.cms.response.CmsCode;
 import com.xuecheng.framework.domain.cms.response.CmsPageResult;
+import com.xuecheng.framework.domain.cms.response.CmsPostPageResult;
 import com.xuecheng.framework.exception.ExceptionCast;
 import com.xuecheng.framework.model.response.CommonCode;
 import com.xuecheng.framework.model.response.QueryResponseResult;
@@ -16,6 +18,7 @@ import com.xuecheng.framework.model.response.QueryResult;
 import com.xuecheng.framework.model.response.ResponseResult;
 import com.xuecheng.manage_cms.config.RabbitmqConfig;
 import com.xuecheng.manage_cms.dao.CmsPageRepository;
+import com.xuecheng.manage_cms.dao.CmsSiteRepository;
 import com.xuecheng.manage_cms.dao.CmsTemplateRepository;
 import freemarker.cache.StringTemplateLoader;
 import freemarker.template.Configuration;
@@ -63,6 +66,9 @@ public class PageService {
 
     @Autowired
     RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    CmsSiteRepository cmsSiteRepository;
 
     /**
      * 分页查询页面
@@ -375,5 +381,56 @@ public class PageService {
         } else {
             return this.add(cmsPage);
         }
+    }
+
+    /**
+     * 一键发布页面
+     *
+     * @param cmsPage
+     * @return
+     */
+    public CmsPostPageResult postPageQuick(CmsPage cmsPage) {
+        // 添加页面
+        CmsPageResult save = this.save(cmsPage);
+        if (!save.isSuccess()) {
+            return new CmsPostPageResult(CommonCode.FAIL, null);
+        }
+        CmsPage newCmsPage = save.getCmsPage();
+        // 要发布的页面id
+        String pageId = newCmsPage.getPageId();
+        // 发布页面
+        ResponseResult responseResult = this.postPage(pageId);
+        if (!responseResult.isSuccess()) {
+            return new CmsPostPageResult(CommonCode.FAIL, null);
+        }
+        // 得到页面的url
+        // 页面url=站点域名+炸的奶奶webpath+页面webpath+页面名称
+        // 站点id
+        String siteId = newCmsPage.getSiteId();
+        // 查询站点信息
+        CmsSite cmsSite = this.findCmsSiteById(siteId);
+        // 站点域名
+        String siteDomain = cmsSite.getSiteDomain();
+        // 站点web路径
+        String pageWebPath = newCmsPage.getPageWebPath();
+        // 页面名称
+        String pageName = newCmsPage.getPageName();
+        // 页面的web访问地址
+        String pageUrl = siteDomain + pageWebPath + pageName;
+        return new CmsPostPageResult(CommonCode.SUCCESS, pageUrl);
+    }
+
+    /**
+     * 根据id查询站点信息
+     *
+     * @param siteId
+     * @return
+     */
+    public CmsSite findCmsSiteById(String siteId) {
+        Optional<CmsSite> optional = cmsSiteRepository.findById(siteId);
+        if (optional.isPresent()) {
+            return optional.get();
+        }
+        return null;
     }
 }

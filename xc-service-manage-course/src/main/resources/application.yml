@@ -21,9 +21,14 @@ pagehelper:
   helper-dialect: mysql
 
 course-publish:
+  #站点id
   siteId: 5b30cba5f58b4411fc6cb1e5
+  #模板id
   templateId: 5b345a6b94db44269cb2bfec
   previewUrl: http://www.xuecheng.com/cms/preview/
+  # 页面的web访问路径
  pageWebPath: /course/detail/
+  #页面的物理存储路径
  pagePhysicalPath: /course/detail/
+  #数据url的前缀
  dataUrlPre: http://localhost:31200/course/courseview/
