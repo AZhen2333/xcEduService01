@@ -16,8 +16,6 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="xc-framework-common" />
-    <orderEntry type="module" module-name="xc-framework-utils" />
     <orderEntry type="module" module-name="xc-framework-model" />
     <orderEntry type="module" module-name="xc-framework-common" />
     <orderEntry type="module" module-name="xc-framework-utils" />
