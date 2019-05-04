@@ -198,4 +198,29 @@ public class MediaUploadService {
         }
         return new ResponseResult(CommonCode.SUCCESS);
     }
+
+    public ResponseResult mergechunks(String fileMd5, String fileName, Long fileSize, String mimetype, String fileExt) {
+        // 获取块文件路径
+        String chunkFileFolderPath = getChunkFileFolderPath(fileMd5);
+        File chunkfileFolder = new File(chunkFileFolderPath);
+        if (!chunkfileFolder.exists()) {
+            chunkfileFolder.mkdirs();
+        }
+        // 合并文件路径
+        File mergeFile = new File(getFilePath(fileMd5, fileExt));
+        // 创建合并文件，存在先删除再创建
+        if (mergeFile.exists()) {
+            mergeFile.delete();
+        }
+        boolean newFile = false;
+        try {
+            newFile = mergeFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+            LOGGER.error("mergechunks..create mergeFile fail:{}", e.getMessage());
+        }
+        if (!newFile) {
+            ExceptionCast.cast(MediaCode.MERGE_FILE_CREATEFAIL);
+        }
+    }
 }
