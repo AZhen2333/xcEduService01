@@ -299,12 +299,14 @@ public class CourseService {
         CourseBase courseBase = saveCoursePubState(courseId);
         // 创建课程索引
         CoursePub coursePub = createCoursePub(courseId);
-        // 课程缓存...
+        // 保存课程索引
         CoursePub newCoursePub = saveCoursePub(courseId, coursePub);
         if (newCoursePub == null) {
             //创建课程索引信息失败
             ExceptionCast.cast(CourseCode.COURSE_PUBLISH_CREATE_INDEX_ERROR);
         }
+        // 课程缓存...
+
         // 页面url
         String pageUrl = cmsPostPageResult.getPageUrl();
         return new CoursePublishResult(CommonCode.SUCCESS, pageUrl);
