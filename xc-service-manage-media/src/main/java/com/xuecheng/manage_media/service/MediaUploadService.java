@@ -1,5 +1,6 @@
 package com.xuecheng.manage_media.service;
 
+import ch.qos.logback.core.util.StringCollectionUtil;
 import com.xuecheng.framework.domain.media.MediaFile;
 import com.xuecheng.framework.domain.media.response.CheckChunkResult;
 import com.xuecheng.framework.domain.media.response.MediaCode;
@@ -7,6 +8,9 @@ import com.xuecheng.framework.exception.ExceptionCast;
 import com.xuecheng.framework.model.response.CommonCode;
 import com.xuecheng.framework.model.response.ResponseResult;
 import com.xuecheng.manage_media.dao.MediaFileRepository;
+import io.netty.util.internal.StringUtil;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,18 +18,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Optional;
+import java.io.*;
+import java.util.*;
 
 @Service
 public class MediaUploadService {
     private final static Logger LOGGER = LoggerFactory.getLogger(MediaUploadService.class);
 
     @Autowired
-    MediaFileRepository eediaFileRepository;
+    MediaFileRepository mediaFileRepository;
 
     @Value("${xc-service-manage-media.upload-location}")
     String uploadPath;
@@ -55,7 +56,7 @@ public class MediaUploadService {
      * @param fileExt
      * @return
      */
-    private String getFileFoldRelativePath(String fileMd5, String fileExt) {
+    private String getFileFolderRelativePath(String fileMd5, String fileExt) {
         String filePath = fileMd5.substring(0, 1) + "/" + fileMd5.substring(1, 2) + "/" + fileMd5 + "/";
         return filePath;
     }
@@ -105,7 +106,7 @@ public class MediaUploadService {
         String filePath = getFilePath(fileMd5, fileExt);
         File file = new File(fileExt);
         // 2.查询数据库文件是否存在
-        Optional<MediaFile> optional = eediaFileRepository.findById(fileMd5);
+        Optional<MediaFile> optional = mediaFileRepository.findById(fileMd5);
         // 文件存在直接返回
         if (file.exists() && optional.isPresent()) {
             ExceptionCast.cast(MediaCode.UPLOAD_FILE_REGISTER_EXIST);
@@ -222,5 +223,122 @@ public class MediaUploadService {
         if (!newFile) {
             ExceptionCast.cast(MediaCode.MERGE_FILE_CREATEFAIL);
         }
+        // 获取块文件，次列表是已经排好序的列表
+        List<File> chunkFiles = getChunkFiles(chunkfileFolder);
+        // 合并文件
+        mergeFile = mergeFile(mergeFile, chunkFiles);
+        if (mergeFile == null) {
+            ExceptionCast.cast(MediaCode.MERGE_FILE_FAIL);
+        }
+        // 校验文件
+        boolean chechResult = this.checkFileMd5(mergeFile, fileMd5);
+        if (!chechResult) {
+            ExceptionCast.cast(MediaCode.MERGE_FILE_CHECKFAIL);
+        }
+        // 将文件信息保存到数据库
+        MediaFile mediaFile = new MediaFile();
+        mediaFile.setFileId(fileMd5);
+        mediaFile.setFileName(fileMd5 + "." + fileExt);
+        mediaFile.setFileOriginalName(fileName);
+        // 文件路径保存相对路径
+        mediaFile.setFilePath(getFileFolderRelativePath(fileMd5, fileExt));
+        mediaFile.setFileSize(fileSize);
+        mediaFile.setUploadTime(new Date());
+        mediaFile.setMimeType(mimetype);
+        mediaFile.setFileType(fileExt);
+        //状态为上传成功
+        mediaFile.setFileStatus("301002");
+        MediaFile save = mediaFileRepository.save(mediaFile);
+        return new ResponseResult(CommonCode.SUCCESS);
+    }
+
+    /**
+     * 校验文件的md5值
+     *
+     * @param mergeFile
+     * @param md5
+     * @return
+     */
+    private boolean checkFileMd5(File mergeFile, String md5) {
+        if (mergeFile == null || StringUtils.isEmpty(md5)) {
+            return false;
+        }
+        FileInputStream mergeFileInputStream = null;
+        try {
+            mergeFileInputStream = new FileInputStream(mergeFile);
+            // 得到文件的md5
+            String mergeFileMd5 = DigestUtils.md5Hex(mergeFileInputStream);
+            // 比较md5
+            if (md5.equalsIgnoreCase(mergeFileMd5)) {
+                return true;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            LOGGER.error("checkFileMd5 error,file is:{},md5 is: {}", mergeFile.getAbsoluteFile(), md5);
+        } finally {
+            try {
+                mergeFileInputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return false;
+        }
+    }
+
+    /**
+     * 获取所有块文件
+     *
+     * @param chunkFileFolder
+     * @return
+     */
+    private List<File> getChunkFiles(File chunkFileFolder) {
+        // 获取路径下的所有文件
+        File[] chunkFiles = chunkFileFolder.listFiles();
+        // 将文件数组转成list，并排序
+        List<File> chunkFileList = new ArrayList<File>();
+        chunkFileList.addAll(Arrays.asList(chunkFiles));
+        // 排序
+        Collections.sort(chunkFileList, new Comparator<File>() {
+            @Override
+            public int compare(File o1, File o2) {
+                if (Integer.parseInt(o1.getName()) > Integer.parseInt(o2.getName())) {
+                    return 1;
+                }
+                return -1;
+            }
+        });
+        return chunkFileList;
+    }
+
+    /**
+     * 合并文件
+     *
+     * @param mergeFile
+     * @param chunkFiles
+     * @return
+     */
+    private File mergeFile(File mergeFile, List<File> chunkFiles) {
+        try {
+            // 创建写文件对象
+            RandomAccessFile raf_write = new RandomAccessFile(mergeFile, "rw");
+            // 遍历分块文件开始合并
+            byte[] bytes = new byte[1024];
+            for (File chunkFile : chunkFiles) {
+                RandomAccessFile raf_read = new RandomAccessFile(chunkFile, "r");
+                int len = -1;
+                // 读取分块文件
+                while ((len = raf_read.read(bytes)) != -1) {
+                    // 向合并文件中写数据
+                    raf_write.write(bytes, 0, len);
+                }
+                raf_read.close();
+            }
+            raf_write.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            LOGGER.error("merge file error:{}", e.getMessage());
+            return null;
+        }
+        return mergeFile;
     }
 }
