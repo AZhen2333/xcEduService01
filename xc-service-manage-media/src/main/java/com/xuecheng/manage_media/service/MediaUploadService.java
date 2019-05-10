@@ -129,7 +129,7 @@ public class MediaUploadService {
         return fileChunkFolderPath;
     }
 
-    public CheckChunkResult checkChunk(String fileMd5, String chunk, String chunkSize) {
+    public CheckChunkResult checkChunk(String fileMd5, String chunk, Integer chunkSize) {
         // 得到块文件所在路径
         String chunkFileFolderPath = getChunkFileFolderPath(fileMd5);
         // 块文件的名称以1，2，3...序号命名，没有扩展名

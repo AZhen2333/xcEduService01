@@ -16,10 +16,10 @@ public interface MediaUploadControllerApi {
     public ResponseResult register(String fileMd5, String fileName, String fileSize, String mimetype, String fileExt);
 
     @ApiOperation("检查的分块")
-    public CheckChunkResult checkchunk(String fileMd5, Integer chunk, Integer chunkSize);
+    public CheckChunkResult checkchunk(String fileMd5, String chunk, Integer chunkSize);
 
     @ApiOperation("'上传分块")
-    public ResponseResult uploadchunk(MultipartFile file, Integer chunk, String fileMd5);
+    public ResponseResult uploadchunk(MultipartFile file, String chunk, String fileMd5);
 
     @ApiOperation("合并文件")
     public ResponseResult mergechunks(String fileMd5, String fileName, Long fileSize, String mimetype, String fileExt);
