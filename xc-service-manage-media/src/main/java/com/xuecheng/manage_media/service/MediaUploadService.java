@@ -1,18 +1,21 @@
 package com.xuecheng.manage_media.service;
 
 import ch.qos.logback.core.util.StringCollectionUtil;
+import com.alibaba.fastjson.JSON;
 import com.xuecheng.framework.domain.media.MediaFile;
 import com.xuecheng.framework.domain.media.response.CheckChunkResult;
 import com.xuecheng.framework.domain.media.response.MediaCode;
 import com.xuecheng.framework.exception.ExceptionCast;
 import com.xuecheng.framework.model.response.CommonCode;
 import com.xuecheng.framework.model.response.ResponseResult;
+import com.xuecheng.manage_media.config.RabbitMQConfig;
 import com.xuecheng.manage_media.dao.MediaFileRepository;
 import io.netty.util.internal.StringUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,8 +31,14 @@ public class MediaUploadService {
     @Autowired
     MediaFileRepository mediaFileRepository;
 
+    @Autowired
+    RabbitTemplate rabbitTemplate;
+
     @Value("${xc-service-manage-media.upload-location}")
     String uploadPath;
+
+    @Value("${xc-service-manage-media.mq.routingkey‐media‐video}")
+    String routingkey_media_video;
 
     /**
      *  根据文件md5得到文件路径
@@ -249,6 +258,13 @@ public class MediaUploadService {
         //状态为上传成功
         mediaFile.setFileStatus("301002");
         MediaFile save = mediaFileRepository.save(mediaFile);
+        // 发送消息到mq
+        // 状态为上传成功
+        mediaFile.setFileStatus("301002");
+        mediaFileRepository.save(mediaFile);
+        String mediaId = mediaFile.getFileId();
+        // 向MQ发送视频处理消息
+        sendProcessVideoMsg(mediaId);
         return new ResponseResult(CommonCode.SUCCESS);
     }
 
@@ -340,5 +356,28 @@ public class MediaUploadService {
             return null;
         }
         return mergeFile;
+    }
+
+    public ResponseResult sendProcessVideoMsg(String mediaId) {
+        Optional<MediaFile> optional = mediaFileRepository.findById(mediaId);
+        if (!optional.isPresent()) {
+            return new ResponseResult(CommonCode.FAIL);
+        }
+        MediaFile mediaFile = optional.get();
+        // 发送视频处理消息
+        Map<String, String> msgMap = new HashMap<>();
+        msgMap.put("mediaId", mediaId);
+        // 发送消息
+        String msg = JSON.toJSONString(msgMap);
+        try {
+            this.rabbitTemplate.convertAndSend(RabbitMQConfig.EX_MEDIA_PROCESSTASK, routingkey_media_video, msg);
+            LOGGER.info("send media process task msg:{}", msg);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            LOGGER.info("send media process task error,msg is:{},error:{}", msg, e.getMessage());
+            return new ResponseResult(CommonCode.SUCCESS);
+        }
+        return new ResponseResult(CommonCode.SUCCESS);
     }
 }
