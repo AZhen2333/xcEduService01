@@ -18,3 +18,15 @@ spring:
     username: guest
     password: guest
     virtualHost: /
+
+eureka:
+  client:
+    registerWithEureka: true #服务注册，是否将自己注册到Eureka服务中
+    fetchRegistry: true #服务发ian，是否从Eureka中获取注册信息
+    serviceUrl: #Eureka呵护端与Eureka服务端的加护地址，高可用状态配置对方的地址，单机状态配置自己(如果不配置则默认本机8761端口)
+      #defaulZone: http://localhost:50101/eureka/
+      defaulZone: ${EUREKA_SERVER:http://localhost:50101/eureka/}
+  instance:
+    prefer-ip-address: true #将自己的ip地主注册到Eureka服务中
+    ip-address: ${IP_ADDRESS:127.0.0.1}
+    instance-id: ${spring.application.name}:${server.port} #指定实例id
