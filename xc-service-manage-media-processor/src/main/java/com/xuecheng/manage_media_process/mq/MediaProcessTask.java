@@ -30,10 +30,10 @@ public class MediaProcessTask {
     /**
      * ffmpeg绝对路径
      */
-    @Value("${xc‐service‐manage‐media.ffmpeg‐path}")
+    @Value("${xc-service-manage-media.ffmpeg-path}")
     String ffmpeg_path;
 
-    @Value("${xc‐service‐manage‐media.upload‐location}")
+    @Value("${xc-service-manage-media.upload-location}")
     String serverPath;
 
     @Autowired
